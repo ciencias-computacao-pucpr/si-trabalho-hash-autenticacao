@@ -40,7 +40,7 @@ public class Main {
         });
         System.out.println();
         System.out.println("Tempo total para quebrar 4 senhas: " + tempoTotal.toString());
-
+        System.exit(0);
     }
 
     private void parseArgs(String z) {
