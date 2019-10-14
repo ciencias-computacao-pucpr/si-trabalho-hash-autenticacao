@@ -16,19 +16,23 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.stream.IntStream;
 
 public class Main {
 
-    private static int[] alfabeto;
+    private List<Character> alfabeto;
+    private CLI cli = new DefaultCLI();
 
     public static void main(String[] args) {
-        popularAlfabeto();
+        Main m = new Main();
+        m.parseArgs(String.join("", args));
+
+        m.alfabeto = m.cli.getAlphabet();
+
         UsuarioDao dao = new UsuarioDaoArquivo("politica_fraca_senhas.txt");
-        Duration tempoTotal = temporizar(() -> {
-            for (Usuario usuario : dao.todos().subList(0, 4)) {
-                Duration tempoUsuario = temporizar(() -> {
-                    String senha = encontrarCombinacao(usuario.senha, false);
+        Duration tempoTotal = m.temporizar(() -> {
+            for (Usuario usuario : dao.todos()) {
+                Duration tempoUsuario = m.temporizar(() -> {
+                    String senha = m.encontrarCombinacao(usuario.senha, m.cli.multiThread());
                     System.out.println("Senha encontrada: " + senha);
                 });
                 System.out.println("Tempo senha do usuário " + usuario.nome + ": " + tempoUsuario);
@@ -39,21 +43,32 @@ public class Main {
 
     }
 
-    private static Duration temporizar(Runnable runnable) {
+    private void parseArgs(String z) {
+        if (z.contains("u")) {
+            cli = new WithUpperCase(cli);
+        }
+        if (z.contains("n")) {
+            cli = new WithNumbers(cli);
+        }
+        if (z.contains("s")) {
+            cli = new WithSymbols(cli);
+        }
+        if (z.contains("m")) {
+            cli = new MultiThread(cli);
+        }
+    }
+
+    private Duration temporizar(Runnable runnable) {
         Instant ini = Instant.now();
         runnable.run();
         Instant fim = Instant.now();
         return Duration.between(ini, fim);
     }
 
-    private static void popularAlfabeto() {
-        alfabeto = createAlphabet(true, true, true);
-    }
-
-    private static String encontrarCombinacao(String hash, boolean singleThread) {
+    private String encontrarCombinacao(String hash, boolean multiThread) {
         List<Future<String>> futures = new ArrayList<>();
         AtomicBoolean encontrado = new AtomicBoolean(false);
-        int cores = singleThread ? 1 : Runtime.getRuntime().availableProcessors();
+        int cores = multiThread ? Runtime.getRuntime().availableProcessors() : 1;
         ExecutorService execurtor = Executors.newFixedThreadPool(cores);
         int added = 0;
         for (int letra : alfabeto) {
@@ -76,7 +91,7 @@ public class Main {
         return null;
     }
 
-    private static String encontrarCombinacao(AtomicBoolean encontrado, String prefix, String hash, int k) {
+    private String encontrarCombinacao(AtomicBoolean encontrado, String prefix, String hash, int k) {
         if (encontrado.get())
             return null;
         if (k == 0) return prefix;
@@ -105,27 +120,4 @@ public class Main {
         }
     }
 
-    private static int[] createAlphabet(boolean incluirMaiusculas, boolean incluirNumeros, boolean incluirSimbolos) {
-        return IntStream.rangeClosed(0, 255)
-                .filter(c -> {
-                    boolean result = isInCharClosedRange((char) c, 'a', 'z');
-                    if (incluirMaiusculas) result = result || isInCharClosedRange((char) c, 'A', 'Z');
-                    if (incluirNumeros) result = result || isInCharClosedRange((char) c, '0', '9');
-                    if (incluirSimbolos)
-                        result = result || !isInCharClosedRange((char) c, 'A', 'Z', 'a', 'z', '0', '9');
-
-                    return result;
-                }).toArray();
-    }
-
-    private static boolean isInCharClosedRange(char c, char... ranges) {
-        boolean result = false;
-        for (int i = 0; i < ranges.length; i += 2) {
-            int ini = ranges[i];
-            int fim = ranges[i + 1];
-            result = result || c >= ini && c <= fim;
-        }
-
-        return false;
-    }
 }
