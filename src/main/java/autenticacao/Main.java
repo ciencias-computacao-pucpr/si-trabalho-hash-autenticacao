@@ -10,7 +10,7 @@ import java.util.Objects;
 
 public class Main {
 
-    private static final String arquivoSenhas = "senhas.txt";
+    private static String arquivoSenhas = "senhas.txt";
     private static BufferedReader reader;
     private static PoliticaSenha politicaSenha;
     private static UsuarioDao dao;
@@ -19,11 +19,14 @@ public class Main {
         reader = new BufferedReader(new InputStreamReader(System.in));
         if (args.length > 0) {
             if (Objects.equals(args[0], "forte")) {
+                arquivoSenhas = "politica_forte_" + arquivoSenhas;
                 politicaSenha = new PoliticaSenhaForte();
             } else {
+                arquivoSenhas = "politica_fraca_" + arquivoSenhas;
                 politicaSenha = new PoliticaSenha4Caracteres();
             }
         } else {
+            arquivoSenhas = "politica_fraca_" + arquivoSenhas;
             politicaSenha = new PoliticaSenha4Caracteres();
         }
         dao = new UsuarioDaoArquivo(arquivoSenhas);
@@ -31,7 +34,7 @@ public class Main {
     }
 
 
-    public static void userInterface () throws IOException {
+    private static void userInterface() throws IOException {
         mostrarOpcoes();
 
         String s;
@@ -55,7 +58,7 @@ public class Main {
     private static void login() throws IOException {
         String nomeUsuario, senhaUsuarioDigitado;
         System.out.println("Digita 0 para cancelar");
-        Usuario usuario = null;
+        Usuario usuario;
         do {
             do {
                 System.out.print("Usuário: ");
@@ -70,18 +73,18 @@ public class Main {
             } while (!politicaSenha.validarSenha(senhaUsuarioDigitado));
 
             usuario = dao.pesquisar(nomeUsuario);
-            if (!autenticar(usuario, senhaUsuarioDigitado)) {
+            if (naoAutenticar(usuario, senhaUsuarioDigitado)) {
                 System.out.println("Usuário ou senha inválidos");
             }
 
-        } while (!autenticar(usuario, senhaUsuarioDigitado));
+        } while (naoAutenticar(usuario, senhaUsuarioDigitado));
 
         System.out.println("Usuário autenticado com sucesso");
 
     }
 
-    private static boolean autenticar(Usuario usuario, String senhaUsuario) {
-        return usuario != null && usuario.senha.equals(md5(senhaUsuario));
+    private static boolean naoAutenticar(Usuario usuario, String senhaUsuario) {
+        return usuario == null || !usuario.senha.equals(md5(senhaUsuario));
     }
 
     private static void cadastrar() throws IOException {
